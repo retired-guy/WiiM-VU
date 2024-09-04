@@ -1,6 +1,6 @@
 # WiiM-VU
 
-Vintage (or modern) VU meters on a wide display with WiiM album art and metadata.  Requires a TosLink input from the WiiM to animate the needles (see resoures below)
+Vintage (or modern) VU meters on a wide display with WiiM album art and metadata.  Requires a TosLink input from the WiiM to animate the needles (see resoures below).  Besides the requirements.txt, SDL2 is required for pygame.
 
 Edit config.ini with WiiM's IP address
 
