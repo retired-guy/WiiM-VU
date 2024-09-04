@@ -1,1 +1,22 @@
 # WiiM-VU
+
+![photo](https://raw.githubusercontent.com/retired-guy/WiiM-VU/main/IMG_2813.jpg)
+
+This is running on a Raspberry Pi 3A+, any RPi should work.
+
+[https://youtu.be/7IBjVMcDTug?si=4Rso7cE985rAPbPS](https://youtu.be/pwiJipj8bvY?si=WiHlZDxQRzx5T1Cy)
+
+Resources:
+
+Wide display: https://www.amazon.com/dp/B0BXL2Q53Y
+
+Optical splitter cable: https://www.amazon.com/dp/B0BKNZHXHS
+
+Toslink to USB adapter: https://www.amazon.com/dp/B0BQQLFQ59
+
+
+Not required, but nice to have:
+
+Skinny short HDMI cable: https://www.amazon.com/dp/B073335YLW
+
+90 degree Micro USB adapter: https://www.amazon.com/dp/B0CSJY3Y45
