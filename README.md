@@ -2,6 +2,8 @@
 
 Vintage (or modern) VU meters on a wide display with WiiM album art and metadata.  Requires a TosLink input from the WiiM (see resoures below)
 
+Edit config.ini with WiiM's IP address
+
 ![photo](https://raw.githubusercontent.com/retired-guy/WiiM-VU/main/IMG_2813.jpg)
 
 This is running on a Raspberry Pi 3A+, any RPi should work.
