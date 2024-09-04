@@ -1,6 +1,6 @@
 # WiiM-VU
 
-Vintage (or modern) VU meters on a wide display with WiiM album art and metadata.  Requires a TosLink input from the WiiM (see resoures below)
+Vintage (or modern) VU meters on a wide display with WiiM album art and metadata.  Requires a TosLink input from the WiiM to animate the needles (see resoures below)
 
 Edit config.ini with WiiM's IP address
 
