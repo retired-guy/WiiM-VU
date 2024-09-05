@@ -223,9 +223,9 @@ class NowPlayingFetcher(Thread):
         self.playing = playing
         self.display_manager = display_manager
         self.title = ""
-        self.old_title = ""
         self.artist = ""
         self.album = ""
+        self.art_url = ""
 
     def run(self):
         while True:
@@ -244,13 +244,28 @@ class NowPlayingFetcher(Thread):
                 meta = obj['TrackMetaData']
                 data = xmltodict.parse(meta)["DIDL-Lite"]["item"]
                 try:
-                    self.title = data['dc:title'][:100]
-                    if self.title != self.old_title:
+                    title = data['dc:title'][:100]
+                    if self.title != title:
+                        self.title = title
                         self.update_track_info(data)
-                        self.old_title = self.title
-                        self.fetch_album_art(data)
                 except Exception as e:
-                    print("Title exception:",e)
+                    pass
+
+                try:
+                    art_url = data["upnp:albumArtURI"]
+                    if self.art_url != art_url:
+                        self.art_url = art_url
+                        self.fetch_album_art(data)
+                        self.update_track_info(data)
+                except Exception as e:
+                    pass
+
+                try:
+                    artist = data.get('upnp:artist', '')[:100]
+                    if self.artist != artist:
+                       self.update_track_info(data) 
+                except Exception as e:
+                    pass
 
             except Exception as e:
                 print(e)
