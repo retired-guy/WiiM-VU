@@ -231,16 +231,17 @@ class NowPlayingFetcher(Thread):
         while True:
             time.sleep(1)
             if not self.playing:
+                self.display_manager.draw_clock()
                 continue
 
             try:
                 obj = self.device.AVTransport.GetInfoEx(InstanceID=0)
                 transport_state = obj['CurrentTransportState']
                 if transport_state != 'PLAYING':
-                    self.playing = False
+                    #self.playing = False
                     continue
 
-                self.playing = True
+                #self.playing = True
                 meta = obj['TrackMetaData']
                 data = xmltodict.parse(meta)["DIDL-Lite"]["item"]
                 try:
@@ -387,9 +388,9 @@ def main():
             else:
                 counter += 1
                 time.sleep(1)
-                if counter > 10:
+                if counter > 30:
+                    counter = 0
                     now_playing_fetcher.update_playing_status(False)
-                    display_manager.draw_clock()
 
     except Exception as e:
         print(e)
