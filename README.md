@@ -6,6 +6,8 @@ Edit config.ini with WiiM's IP address
 
 ![photo](https://raw.githubusercontent.com/retired-guy/WiiM-VU/main/IMG_2813.jpg)
 
+![photo](https://raw.githubusercontent.com/retired-guy/WiiM-VU/main/IMG_2879.jpeg)
+
 This is running on a Raspberry Pi 3A+, any RPi should work.
 
 [https://youtu.be/7IBjVMcDTug?si=4Rso7cE985rAPbPS](https://youtu.be/pwiJipj8bvY?si=WiHlZDxQRzx5T1Cy)
