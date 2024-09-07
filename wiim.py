@@ -131,6 +131,9 @@ class DisplayManager:
         self.artist = ""
         self.level_l = 0
         self.level_r = 0
+        self.duration = 0
+        self.reltime = 0
+        self.progress = 0
 
     def load_meters(self, path):
         try:
@@ -153,6 +156,11 @@ class DisplayManager:
         self.title = title
         self.album = album
         self.artist = artist
+
+    def set_progress(self, duration, reltime, progress):
+        self.duration = duration
+        self.reltime = reltime
+        self.progress = progress
 
     def draw_text(self, text, font, color, pos):
         rendered_text = font.render(text, 1, color)
@@ -202,6 +210,13 @@ class DisplayManager:
         self.draw_text(self.title, self.font_large, TEXTCOLOR, (410, 290))
         self.draw_text(self.artist, self.font_small, TEXTCOLOR, (410, 340))
         self.draw_text(self.album, self.font_small, TEXTCOLOR, (410, 370))
+
+        # Draw progress bar
+        progress_startpoint = (410,333)
+        progress_endpoint = (410+self.progress*(1280-410)*.01,333)
+        pygame.draw.line(self.screen, TEXTCOLOR, progress_startpoint, progress_endpoint, 1)
+        pygame.draw.circle(self.screen, TEXTCOLOR, progress_endpoint, 4)
+
         pygame.display.update()
 
     def draw_clock(self):
@@ -226,6 +241,9 @@ class NowPlayingFetcher(Thread):
         self.artist = ""
         self.album = ""
         self.art_url = ""
+        self.duration = 0
+        self.reltime = 0
+        self.progress = 0
 
     def run(self):
         while True:
@@ -238,10 +256,18 @@ class NowPlayingFetcher(Thread):
                 obj = self.device.AVTransport.GetInfoEx(InstanceID=0)
                 transport_state = obj['CurrentTransportState']
                 if transport_state != 'PLAYING':
-                    #self.playing = False
+                    self.display_manager.set_progress(0,0,0)
                     continue
 
-                #self.playing = True
+                try:
+                    self.duration = self.get_sec(obj['TrackDuration'])
+                    self.reltime = self.get_sec(obj['RelTime'])
+                    self.progress = (self.reltime / self.duration) * 100
+                    self.display_manager.set_progress(self.duration,self.reltime,self.progress)
+                except Exception as e:
+                    self.display_manager.set_progress(0,0,0)
+                    pass
+
                 meta = obj['TrackMetaData']
                 data = xmltodict.parse(meta)["DIDL-Lite"]["item"]
                 try:
@@ -271,6 +297,11 @@ class NowPlayingFetcher(Thread):
             except Exception as e:
                 print(e)
 
+    def get_sec(self,time_str):
+        """Get seconds from time."""
+        h, m, s = time_str.split(':')
+        return int(h) * 3600 + int(m) * 60 + int(s)
+
     def update_playing_status(self, playing):
         self.playing = playing
 
@@ -299,6 +330,9 @@ class NowPlayingFetcher(Thread):
             r = requests.get(art_url, stream=True)
             img = io.BytesIO(r.content)
             image = pygame.image.load(img)
+            dark = pygame.Surface((image.get_width(), image.get_height()), flags=pygame.SRCALPHA)
+            dark.fill((50, 50, 50, 0))
+            image.blit(dark, (0, 0), special_flags=pygame.BLEND_RGBA_SUB)
             self.display_manager.image = pygame.transform.scale(image, IMAGE_SIZE)
         except Exception as e:
             print(e)
