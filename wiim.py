@@ -15,6 +15,8 @@ from collections import deque
 from datetime import datetime
 from pygame.locals import *
 from threading import Thread
+import urllib3
+urllib3.disable_warnings()
 
 cfg = configparser.ConfigParser()
 cfg.read('config.ini')
@@ -36,14 +38,31 @@ LEFT_METER_POSITION = tuple(eval( cfg.get("Defaults","left_meter_pos") )) #(400,
 RIGHT_METER_POSITION = tuple(eval( cfg.get("Defaults","right_meter_pos") ))  # (840, 0)
 METER_SIZE = tuple(eval( cfg.get("Defaults","meter_size") )) #(440, 280)
 current_meter = cfg.get("Defaults","current_meter")
+
 METER_PATH = cfg.get(current_meter,"meter_path")
 METER_WINDOW_BOTTOM = cfg.getint(current_meter,"meter_window_bottom")
 
 NEEDLE_COLOR = tuple(eval( cfg.get(current_meter,"needle_color") ))
-needle_l_x = LEFT_METER_POSITION[0] + METER_SIZE[0] / 2
-needle_r_x = RIGHT_METER_POSITION[0] + METER_SIZE[0] / 2
+try: 
+    needle_ratio_x = cfg.getfloat(current_meter,"needle_ratio_x")
+    needle_l_x = LEFT_METER_POSITION[0] + needle_ratio_x * METER_SIZE[0]*2
+    needle_r_x = (LEFT_METER_POSITION[0] + METER_SIZE[0]*2) - (needle_ratio_x * METER_SIZE[0]*2) 
+    print(needle_ratio_x,needle_l_x,needle_r_x)
+except Exception as e:   
+    print("Needle ratio not found",e)
+    needle_l_x = LEFT_METER_POSITION[0] + METER_SIZE[0] / 2
+    needle_r_x = RIGHT_METER_POSITION[0] + METER_SIZE[0] / 2
+
 needle_y = METER_SIZE[1] - cfg.getint(current_meter,"needle_zero_y")
 needle_length = cfg.getint(current_meter,"needle_length")
+
+if "-2w" in METER_PATH:
+    print(current_meter, "DoubleWide")
+    METER_SIZE = (METER_SIZE[0] * 2,METER_SIZE[1])
+    DOUBLE_WIDE = True
+else:
+    print(current_meter)
+    DOUBLE_WIDE = False
 
 # Needle startpoints and length
 startpointL = pygame.math.Vector2(needle_l_x,needle_y) 
@@ -188,23 +207,28 @@ class DisplayManager:
         if self.meter_img:
             try:
                 self.screen.blit(self.meter_img, LEFT_METER_POSITION)
-                self.screen.blit(self.meter_img, RIGHT_METER_POSITION)
+                if DOUBLE_WIDE == False:
+                    self.screen.blit(self.meter_img, RIGHT_METER_POSITION)
             except Exception as e:
                 print(e)
 
         # Draw needles
         angle_l = self.level_l * SCALE + MIN_ANGLE
         current_endpoint = startpointL + endpoint.rotate(angle_l)
-        pygame.draw.line(self.screen, NEEDLE_COLOR, startpointL, current_endpoint, 4)
+        pygame.draw.line(self.screen, NEEDLE_COLOR, startpointL, current_endpoint, 3)
 
         angle_r = level_r * SCALE + MIN_ANGLE
         current_endpoint = startpointR + endpoint.rotate(angle_r)
-        pygame.draw.line(self.screen, NEEDLE_COLOR, startpointR, current_endpoint, 4)
+        pygame.draw.line(self.screen, NEEDLE_COLOR, startpointR, current_endpoint, 3)
 
         # Draw meter base over needle
         if METER_WINDOW_BOTTOM > 0:
             self.screen.blit(self.base_img, self.l_base_pos)
-            self.screen.blit(self.base_img, self.r_base_pos)
+            if DOUBLE_WIDE == False:
+                self.screen.blit(self.base_img, self.r_base_pos)
+
+        # Blank the text area so bottom of needles don't show
+        pygame.draw.rect(self.screen, BGCOLOR, pygame.Rect((400,280,880,120)))
 
         # Draw text
         self.draw_text(self.title, self.font_large, TEXTCOLOR, (410, 290))
@@ -249,7 +273,6 @@ class NowPlayingFetcher(Thread):
         while True:
             time.sleep(1)
             if not self.playing:
-                self.display_manager.draw_clock()
                 continue
 
             try:
@@ -274,6 +297,9 @@ class NowPlayingFetcher(Thread):
                     title = data['dc:title'][:100]
                     if self.title != title:
                         self.title = title
+                        art_url = data["upnp:albumArtURI"]
+                        self.art_url = art_url
+                        self.fetch_album_art(data)
                         self.update_track_info(data)
                 except Exception as e:
                     pass
@@ -327,7 +353,7 @@ class NowPlayingFetcher(Thread):
             if isinstance(art_url, dict):
                 art_url = art_url["#text"]
 
-            r = requests.get(art_url, stream=True)
+            r = requests.get(art_url, verify=False, stream=True)
             img = io.BytesIO(r.content)
             image = pygame.image.load(img)
             dark = pygame.Surface((image.get_width(), image.get_height()), flags=pygame.SRCALPHA)
@@ -358,6 +384,7 @@ def main():
 
     display_manager = DisplayManager(screen)
     counter = 0
+    clock_enabled = True
 
     # Setup PyAudio
     pa = pyaudio.PyAudio()
@@ -377,6 +404,7 @@ def main():
     INPUT_FRAMES_PER_BLOCK = int(RATE * INPUT_BLOCK_TIME)
 
     index = info['index']
+
     try:
         stream = pa.open(format=pyaudio.paInt16,
                          channels=2,
@@ -384,6 +412,7 @@ def main():
                          input=True,
                          frames_per_buffer=INPUT_FRAMES_PER_BLOCK,
                          input_device_index=index)
+        print(stream)
 
         audio_processor = AudioProcessor(stream, rate=RATE, fpb = INPUT_FRAMES_PER_BLOCK)
 
@@ -394,10 +423,12 @@ def main():
         peak_r = -60
 
         while True:
-            for event in pygame.event.get():
-                if event.type == QUIT or (event.type == KEYUP and event.key == K_ESCAPE):
-                    pygame.quit()
-                    sys.exit()
+            if pygame.event.poll():
+                for event in pygame.event.get():
+                    print(event)
+                    if event.type == QUIT or (event.type == KEYUP and event.key == K_ESCAPE):
+                        pygame.quit()
+                        sys.exit()
 
             level_l, level_r = audio_processor.process_audio()
 
@@ -410,6 +441,8 @@ def main():
             if peak_l > 0 or  peak_r > 0:
                 now_playing_fetcher.update_playing_status(True)
                 counter = 0
+                clock_enabled = False
+
                 ### Fast rise, slow decay
                 if (level_l + level_r) > (peak_l + peak_r):
                     peak_l = ( (1*peak_l) + (1*level_l) ) / 2
@@ -422,8 +455,12 @@ def main():
             else:
                 counter += 1
                 time.sleep(1)
+                if clock_enabled:
+                    display_manager.draw_clock()
+ 
                 if counter > 30:
                     counter = 0
+                    clock_enabled = True
                     now_playing_fetcher.update_playing_status(False)
 
     except Exception as e:
